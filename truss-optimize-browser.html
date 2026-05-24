@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>אופטימיזציה למסבך</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, rgba(59, 130, 246, 0.18), transparent 25%),
+        linear-gradient(180deg, #0f172a 0%, #111827 55%, #1f2937 100%);
+      padding: 24px;
+    }
+
+    .shell {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.7rem, 2vw + 1rem, 2.2rem);
+    }
+
+    .subtitle {
+      margin: 0 0 20px;
+      color: #cbd5e1;
+      line-height: 1.6;
+      max-width: 920px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(340px, 380px) minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: 0 18px 38px rgba(15, 23, 42, 0.28);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #334155;
+      background: #111827;
+      color: #f8fafc;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 1rem;
+    }
+
+    button {
+      margin-top: 14px;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      background: linear-gradient(90deg, #38bdf8, #6366f1);
+      color: #0f172a;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      opacity: 0.98;
+    }
+
+    .status {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      display: none;
+      font-weight: 700;
+    }
+
+    .status.loading {
+      display: block;
+      background: rgba(59, 130, 246, 0.16);
+      color: #bae6fd;
+    }
+
+    .status.ok {
+      display: block;
+      background: rgba(52, 211, 153, 0.16);
+      color: #bbf7d0;
+    }
+
+    .status.error {
+      display: block;
+      background: rgba(248, 113, 113, 0.18);
+      color: #fecaca;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .stat-box {
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .stat-label {
+      color: #cbd5e1;
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .summary {
+      margin-top: 18px;
+      color: #cbd5e1;
+      line-height: 1.7;
+    }
+
+    .note {
+      margin-top: 12px;
+      color: #93c5fd;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .chart-wrap {
+      width: 100%;
+      overflow: auto;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      padding: 14px;
+      box-sizing: border-box;
+    }
+
+    .visual-title {
+      margin: 0 0 10px;
+      font-size: 1.1rem;
+    }
+
+    svg {
+      width: 100%;
+      min-height: 520px;
+      display: block;
+      background: linear-gradient(180deg, rgba(30,41,59,0.56), rgba(15,23,42,0.8));
+      border-radius: 16px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      color: #cbd5e1;
+      font-size: 0.95rem;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .swatch {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .small {
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <h1>אופטימיזציה למסבך</h1>
+    <p class="subtitle">
+      הזן את כתובת ה-API של המסבך והעומס המקוריים. הדף יטען את המבנה, ינסה להסיר קורות בכפולות עד ש־<strong>מקדם הביטחון המינימלי</strong> עדיין יהיה גדול מ־1, ויציג את המסבך המאופטם בצורה ויזואלית.
+    </p>
+
+    <div class="grid">
+      <div class="card">
+        <div>
+          <label for="urlInput">כתובת ה-API</label>
+          <input id="urlInput" type="text" value="http://192.168.60.104:8451/api/problem" />
+        </div>
+
+        <button id="runBtn" type="button">התחל אופטימיזציה</button>
+
+        <div id="statusBox" class="status"></div>
+
+        <div class="stats">
+          <div class="stat-box">
+            <div class="stat-label">קורות מקוריות</div>
+            <div class="stat-value" id="origMembers">-</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">קורות לאחר אופטימיזציה</div>
+            <div class="stat-value" id="optMembers">-</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">SF מינימלי</div>
+            <div class="stat-value" id="minSF">-</div>
+          </div>
+        </div>
+
+        <div class="summary" id="summaryText"></div>
+        <div class="note">
+          האלגוריתם משתמש בהסרה גרידית של קורות בעלות SF גבוה יחסית, תוך שמירה על קשירות המבנה והישארות כל צומת מחובר למניח ברך/תמך.
+        </div>
+      </div>
+
+      <div class="card chart-wrap">
+        <h2 class="visual-title">מסבך מאופְטָם</h2>
+        <svg id="trussSvg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="legend">
+          <span class="legend-item"><span class="swatch" style="background:#34d399;"></span> קורות פעילות</span>
+          <span class="legend-item"><span class="swatch" style="background:#f59e0b;"></span> צמתים</span>
+          <span class="legend-item"><span class="swatch" style="background:#38bdf8;"></span> תמיכות</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_E_PA = 200e9;
+
+    const ui = {
+      urlInput: document.getElementById('urlInput'),
+      runBtn: document.getElementById('runBtn'),
+      statusBox: document.getElementById('statusBox'),
+      origMembers: document.getElementById('origMembers'),
+      optMembers: document.getElementById('optMembers'),
+      minSF: document.getElementById('minSF'),
+      summaryText: document.getElementById('summaryText'),
+      svg: document.getElementById('trussSvg')
+    };
+
+    function setStatus(message, tone) {
+      ui.statusBox.textContent = message;
+      ui.statusBox.className = `status ${tone}`;
+    }
+
+    function gaussianElim(K, F, n) {
+      for (let col = 0; col < n; col += 1) {
+        let maxRow = col;
+        for (let row = col + 1; row < n; row += 1) {
+          if (Math.abs(K[row * n + col]) > Math.abs(K[maxRow * n + col])) {
+            maxRow = row;
+          }
+        }
+
+        for (let k = 0; k < n; k += 1) {
+          [K[col * n + k], K[maxRow * n + k]] = [K[maxRow * n + k], K[col * n + k]];
+        }
+        [F[col], F[maxRow]] = [F[maxRow], F[col]];
+
+        for (let row = col + 1; row < n; row += 1) {
+          if (Math.abs(K[col * n + col]) < 1e-14) {
+            continue;
+          }
+          const factor = K[row * n + col] / K[col * n + col];
+          for (let k = col; k < n; k += 1) {
+            K[row * n + k] -= factor * K[col * n + k];
+          }
+          F[row] -= factor * F[col];
+        }
+      }
+
+      const u = new Array(n).fill(0);
+      for (let i = n - 1; i >= 0; i -= 1) {
+        if (Math.abs(K[i * n + i]) < 1e-14) {
+          u[i] = 0;
+          continue;
+        }
+        let sum = F[i];
+        for (let j = i + 1; j < n; j += 1) {
+          sum -= K[i * n + j] * u[j];
+        }
+        u[i] = sum / K[i * n + i];
+      }
+      return u;
+    }
+
+    function solveProblem(problem) {
+      const {
+        nodes,
+        members,
+        boundary,
+        loads,
+        rodSide,
+        yieldMPa,
+        E_PA = DEFAULT_E_PA
+      } = problem;
+
+      const n = nodes.length;
+      const A = rodSide * rodSide;
+      const ndof = 2 * n;
+      const fixed = new Set();
+
+      nodes.forEach(([x, y], index) => {
+        const pinned =
+          (boundary.x_min !== null && x <= boundary.x_min) ||
+          (boundary.x_max !== null && x >= boundary.x_max) ||
+          (boundary.y_min !== null && y <= boundary.y_min) ||
+          (boundary.y_max !== null && y >= boundary.y_max);
+
+        if (pinned) {
+          fixed.add(2 * index);
+          fixed.add(2 * index + 1);
+        }
+      });
+
+      const K = new Array(ndof * ndof).fill(0);
+      const add = (row, col, value) => {
+        K[row * ndof + col] += value;
+      };
+
+      members.forEach(([a, b]) => {
+        const [x1, y1] = nodes[a];
+        const [x2, y2] = nodes[b];
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const L = Math.hypot(dx, dy);
+        const c = dx / L;
+        const s = dy / L;
+        const k = E_PA * A / L;
+        const km = [
+          c * c, c * s, -c * c, -c * s,
+          c * s, s * s, -c * s, -s * s,
+          -c * c, -c * s, c * c, c * s,
+          -c * s, -s * s, c * s, s * s
+        ];
+        const dofs = [2 * a, 2 * a + 1, 2 * b, 2 * b + 1];
+
+        for (let r = 0; r < 4; r += 1) {
+          for (let c = 0; c < 4; c += 1) {
+            add(dofs[r], dofs[c], k * km[r * 4 + c]);
+          }
+        }
+      });
+
+      const F = new Array(ndof).fill(0);
+      loads.forEach(([node, fx, fy]) => {
+        F[2 * node] += fx;
+        F[2 * node + 1] += fy;
+      });
+
+      fixed.forEach((dof) => {
+        for (let i = 0; i < ndof; i += 1) {
+          K[dof * ndof + i] = 0;
+          K[i * ndof + dof] = 0;
+        }
+        K[dof * ndof + dof] = 1;
+        F[dof] = 0;
+      });
+
+      const u = gaussianElim(K.slice(), F.slice(), ndof);
+      const memberData = members.map(([a, b], idx) => {
+        const [x1, y1] = nodes[a];
+        const [x2, y2] = nodes[b];
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const L = Math.hypot(dx, dy);
+        const c = dx / L;
+        const s = dy / L;
+        const elongation = (u[2 * b] - u[2 * a]) * c + (u[2 * b + 1] - u[2 * a + 1]) * s;
+        const force = E_PA * A / L * elongation;
+        const stressPa = Math.abs(force) / A;
+        const stressMPa = stressPa / 1e6;
+        const safetyFactor = stressPa > 0 ? yieldMPa / stressMPa : Infinity;
+        return {
+          idx,
+          a,
+          b,
+          force,
+          stressMPa,
+          safetyFactor,
+          type: force >= 0 ? 'מתח' : 'לחץ'
+        };
+      });
+
+      const minSafetyFactor = memberData.reduce((best, member) => {
+        if (!Number.isFinite(member.safetyFactor)) {
+          return best;
+        }
+        return member.safetyFactor < best ? member.safetyFactor : best;
+      }, Infinity);
+
+      return {
+        minSafetyFactor,
+        memberData,
+        safe: Number.isFinite(minSafetyFactor) && minSafetyFactor >= 1
+      };
+    }
+
+    function buildGraph(members) {
+      const graph = new Map();
+      members.forEach(([a, b]) => {
+        if (!graph.has(a)) graph.set(a, new Set());
+        if (!graph.has(b)) graph.set(b, new Set());
+        graph.get(a).add(b);
+        graph.get(b).add(a);
+      });
+      return graph;
+    }
+
+    function isConnectedToSupports(nodes, members, boundary) {
+      const pinned = new Set();
+      nodes.forEach(([x, y], index) => {
+        const pinnedNode =
+          (boundary.x_min !== null && x <= boundary.x_min) ||
+          (boundary.x_max !== null && x >= boundary.x_max) ||
+          (boundary.y_min !== null && y <= boundary.y_min) ||
+          (boundary.y_max !== null && y >= boundary.y_max);
+        if (pinnedNode) {
+          pinned.add(index);
+        }
+      });
+
+      if (pinned.size === 0) {
+        return true;
+      }
+
+      const graph = buildGraph(members);
+      const visited = new Set();
+      const stack = [...pinned];
+
+      while (stack.length) {
+        const node = stack.pop();
+        if (visited.has(node)) continue;
+        visited.add(node);
+        for (const next of graph.get(node) || []) {
+          if (!visited.has(next)) {
+            stack.push(next);
+          }
+        }
+      }
+
+      return visited.size === nodes.length;
+    }
+
+    function optimize(problem) {
+      const originalMembers = problem.members.slice();
+      let currentMembers = originalMembers.slice();
+      let currentProblem = { ...problem, members: currentMembers };
+      let currentResult = solveProblem(currentProblem);
+
+      if (!currentResult.safe) {
+        throw new Error('המסבך המקורי אינו עומד בתנאי הביטחון המינימלי, ולכן לא ניתן לבצע אופטימיזציה אמינה.');
+      }
+
+      let changed = true;
+      while (changed) {
+        changed = false;
+        currentProblem = { ...problem, members: currentMembers };
+        currentResult = solveProblem(currentProblem);
+
+        const ranked = currentMembers
+          .map((member, index) => ({
+            index,
+            member,
+            safetyFactor: currentResult.memberData[index].safetyFactor
+          }))
+          .sort((left, right) => right.safetyFactor - left.safetyFactor);
+
+        for (const candidate of ranked) {
+          if (currentMembers.length <= 1) {
+            break;
+          }
+
+          const testMembers = currentMembers.filter((_, index) => index !== candidate.index);
+          const connected = isConnectedToSupports(problem.nodes, testMembers, problem.boundary);
+          if (!connected) {
+            continue;
+          }
+
+          const testProblem = { ...problem, members: testMembers };
+          const testResult = solveProblem(testProblem);
+
+          if (testResult.safe) {
+            currentMembers = testMembers;
+            currentResult = testResult;
+            changed = true;
+            break;
+          }
+        }
+      }
+
+      return {
+        originalMembers,
+        finalMembers: currentMembers,
+        result: currentResult
+      };
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const data = await response.json();
+      return data;
+    }
+
+    function formatNumber(value) {
+      return Number.isFinite(value) ? value.toFixed(3) : '∞';
+    }
+
+    function drawTruss(problem, members) {
+      const svg = ui.svg;
+      svg.innerHTML = '';
+
+      const nodes = problem.nodes;
+      const xs = nodes.map(([x]) => x);
+      const ys = nodes.map(([, y]) => y);
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+
+      const pad = 12;
+      const width = 100;
+      const height = 100;
+      const scaleX = (width - 2 * pad) / Math.max(1, maxX - minX);
+      const scaleY = (height - 2 * pad) / Math.max(1, maxY - minY);
+      const scale = Math.min(scaleX, scaleY);
+
+      const toPoint = ([x, y]) => [
+        pad + (x - minX) * scale,
+        height - pad - (y - minY) * scale
+      ];
+
+      const set = new Set(members.map(([a, b]) => `${a}-${b}`));
+      const pinned = new Set();
+      nodes.forEach(([x, y], index) => {
+        if (
+          (problem.boundary.x_min !== null && x <= problem.boundary.x_min) ||
+          (problem.boundary.x_max !== null && x >= problem.boundary.x_max) ||
+          (problem.boundary.y_min !== null && y <= problem.boundary.y_min) ||
+          (problem.boundary.y_max !== null && y >= problem.boundary.y_max)
+        ) {
+          pinned.add(index);
+        }
+      });
+
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+      marker.setAttribute('id', 'supportArrow');
+      marker.setAttribute('markerWidth', '8');
+      marker.setAttribute('markerHeight', '8');
+      marker.setAttribute('refX', '0');
+      marker.setAttribute('refY', '3');
+      marker.setAttribute('orient', 'auto');
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', 'M 0,0 L 0,6 L 6,3 z');
+      path.setAttribute('fill', '#38bdf8');
+      marker.appendChild(path);
+      defs.appendChild(marker);
+      svg.appendChild(defs);
+
+      members.forEach(([a, b]) => {
+        const [x1, y1] = toPoint(nodes[a]);
+        const [x2, y2] = toPoint(nodes[b]);
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', '#34d399');
+        line.setAttribute('stroke-width', '1.4');
+        line.setAttribute('stroke-linecap', 'round');
+        svg.appendChild(line);
+      });
+
+      nodes.forEach(([x, y], index) => {
+        const [px, py] = toPoint([x, y]);
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', px);
+        circle.setAttribute('cy', py);
+        circle.setAttribute('r', pinned.has(index) ? 2.6 : 2.1);
+        circle.setAttribute('fill', pinned.has(index) ? '#38bdf8' : '#f59e0b');
+        svg.appendChild(circle);
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', px + 2.4);
+        text.setAttribute('y', py - 2.8);
+        text.setAttribute('fill', '#e2e8f0');
+        text.setAttribute('font-size', '4');
+        text.textContent = String(index);
+        svg.appendChild(text);
+      });
+
+      pinned.forEach((index) => {
+        const [px, py] = toPoint(nodes[index]);
+        const support = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        support.setAttribute('x1', px - 3);
+        support.setAttribute('y1', py + 3);
+        support.setAttribute('x2', px + 3);
+        support.setAttribute('y2', py + 3);
+        support.setAttribute('stroke', '#38bdf8');
+        support.setAttribute('stroke-width', '1.5');
+        svg.appendChild(support);
+
+        const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        arrow.setAttribute('x1', px);
+        arrow.setAttribute('y1', py);
+        arrow.setAttribute('x2', px);
+        arrow.setAttribute('y2', py + 10);
+        arrow.setAttribute('stroke', '#38bdf8');
+        arrow.setAttribute('stroke-width', '1.5');
+        arrow.setAttribute('marker-end', 'url(#supportArrow)');
+        svg.appendChild(arrow);
+      });
+    }
+
+    function renderResults(problem, optimization) {
+      ui.origMembers.textContent = String(problem.members.length);
+      ui.optMembers.textContent = String(optimization.finalMembers.length);
+      ui.minSF.textContent = formatNumber(optimization.result.minSafetyFactor);
+
+      const removed = problem.members.length - optimization.finalMembers.length;
+      const safeText = optimization.result.safe ? 'מסבך בטוח' : 'מסבך לא בטוח';
+      ui.summaryText.innerHTML = `
+        <strong>תוצאה:</strong> הוסר ${removed} מוטים.
+        מקדם הביטחון המינימלי לאחר האופטימיזציה הוא ${formatNumber(optimization.result.minSafetyFactor)}.
+        סטטוס: ${safeText}.<br>
+        <span class="small">הקווים המוצגים ב-SVG מייצגים את המבנה המאופְטָם שנשאר.</span>
+      `;
+
+      drawTruss(problem, optimization.finalMembers);
+    }
+
+    async function runOptimization() {
+      const url = ui.urlInput.value.trim();
+      if (!url) {
+        setStatus('אנא הזן כתובת API.', 'error');
+        return;
+      }
+
+      setStatus('טוען את המסבך ומתחיל באופטימיזציה…', 'loading');
+
+      try {
+        const rawProblem = await fetchJson(url);
+        const problem = {
+          nodes: rawProblem.nodes,
+          members: rawProblem.members,
+          boundary: rawProblem.boundary,
+          loads: rawProblem.loads,
+          rodSide: rawProblem.rodSide,
+          yieldMPa: rawProblem.yieldMPa,
+          E_PA: rawProblem.E_PA || DEFAULT_E_PA
+        };
+
+        const optimization = optimize(problem);
+        renderResults(problem, optimization);
+        setStatus('האופטימיזציה הסתיימה בהצלחה.', 'ok');
+      } catch (error) {
+        console.error(error);
+        setStatus(`שגיאה: ${error.message}`, 'error');
+      }
+    }
+
+    ui.runBtn.addEventListener('click', runOptimization);
+    ui.urlInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        runOptimization();
+      }
+    });
+  </script>
+</body>
+</html>
