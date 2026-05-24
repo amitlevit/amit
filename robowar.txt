@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ROBOWAR</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a0f;--surf:#12121a;--brd:#2a2a3a;--acc:#00f2fe;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;--txt:#e2e8f0;--mut:#64748b;--font:'Courier New',monospace}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--font);overflow:hidden}
+#app{display:grid;grid-template-rows:78px 1fr 58px;height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:0 20px;background:var(--surf);border-bottom:1px solid var(--brd);z-index:10}
+header h1{font-size:2.8rem;letter-spacing:4px;color:var(--acc);text-shadow:0 0 10px var(--acc)}
+#dot{width:16px;height:16px;border-radius:50%;background:var(--err);box-shadow:0 0 5px var(--err);transition:.3s}
+#dot.on{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+#dot.run{background:var(--acc);box-shadow:0 0 10px var(--acc)}
+#stxt{font-size:2rem;color:var(--mut)}
+.spacer{flex:1}
+.hbtn{background:none;border:1px solid var(--brd);border-radius:3px;color:var(--mut);padding:6px 16px;font-size:1.8rem;cursor:pointer;font-family:var(--font)}
+.hbtn:hover{color:var(--acc);border-color:var(--acc)}
+.hbtn.play{color:var(--acc);border-color:var(--acc)}
+#wrap{position:relative;overflow:hidden;background:var(--bg);display:flex}
+#canvas{display:block}
+#board{flex:1;position:relative}
+/* scoreboard */
+#sc{position:absolute;top:8px;right:8px;background:rgba(18,18,26,.92);border:1px solid var(--brd);border-radius:5px;padding:10px 14px;width:220px;max-height:calc(100% - 16px);overflow-y:auto;font-size:1.8rem}
+#sc h3{color:var(--acc);letter-spacing:2px;margin-bottom:8px;font-size:1.9rem}
+#sl{display:flex;flex-direction:column;gap:2px}
+.sr{display:flex;justify-content:space-between;gap:8px;padding:4px 6px;border-bottom:1px solid #1e1e2e}
+.sr .sn{color:var(--txt)}.sr .sv{color:var(--acc)}
+/* admin */
+#adm{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:var(--surf);border:1px solid #7c3aed;border-radius:7px;padding:18px 24px;flex-direction:column;gap:10px;z-index:200;min-width:380px;box-shadow:0 0 24px rgba(124,58,237,.35)}
+#adm.open{display:flex}
+#adm h3{color:#7c3aed;letter-spacing:3px;font-size:2rem;text-align:center}
+#ap{background:var(--bg);border:1px solid var(--brd);border-radius:3px;color:var(--txt);padding:8px 12px;font-family:var(--font);font-size:2rem;outline:none}
+#ap:focus{border-color:#7c3aed}
+.abts{display:flex;gap:8px}
+.abt{flex:1;padding:10px;border:none;border-radius:3px;font-family:var(--font);font-size:1.8rem;cursor:pointer;transition:.15s}
+.abt:hover{opacity:.82}
+.abt-s{background:var(--ok);color:#000}
+.abt-p{background:var(--warn);color:#000}
+.abt-r{background:var(--err);color:#fff}
+.abt-m{background:#7c3aed;color:#fff}
+#afb{font-size:1.8rem;color:var(--mut);text-align:center;min-height:1em}
+/* splash */
+#spl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,10,15,.97);z-index:100;gap:24px}
+#spl h2{font-size:clamp(2rem,6vw,4.5rem);letter-spacing:6px;color:var(--acc);text-shadow:0 0 20px var(--acc);animation:pulse 2s infinite}
+#spl p{color:var(--mut);font-size:2rem;letter-spacing:2px}
+.btn-ent{background:transparent;border:1px solid var(--acc);color:var(--acc);padding:14px 48px;border-radius:3px;font-family:var(--font);font-size:2.2rem;letter-spacing:3px;cursor:pointer}
+.btn-ent:hover{background:rgba(0,242,254,.1);box-shadow:0 0 16px var(--acc)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+/* toast */
+#toast{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);background:var(--surf);border:1px solid var(--acc);border-radius:5px;padding:10px 24px;font-size:2rem;color:var(--acc);opacity:0;pointer-events:none;transition:opacity .3s;z-index:300;white-space:nowrap}
+#toast.show{opacity:1}
+footer{display:flex;align-items:center;gap:14px;padding:0 20px;background:var(--surf);border-top:1px solid var(--brd);font-size:2rem;color:var(--mut)}
+#ftick{margin-left:auto}
+</style>
+</head>
+<body>
+
+<script id="player-codes">
+/*
+ * ╔══════════ ROBOWAR — HOW TO PLAY ═════════════════════════════╗
+ * ║  Visible via F12 → Sources                                       ║
+ * ╟───────────────────────────────────────────────────────────╢
+ * ║  QUICK START (browser console):                                 ║
+ * ║    auth('YOUR_CODE')                                            ║
+ * ║    move('UP')  move('DOWN')  move('LEFT')  move('RIGHT')        ║
+ * ║    move('STAY')                                                 ║
+ * ╟───────────────────────────────────────────────────────────╢
+ * ║  WEBSOCKET API:                                                  ║
+ * ║    var ws = new WebSocket('ws://' + location.host)              ║
+ * ║    ws.send(JSON.stringify({ type:'auth', code:'...' }))          ║
+ * ║    ws.send(JSON.stringify({ type:'cmd',  move:'UP' }))           ║
+ * ║    ws.onmessage = e => console.log(JSON.parse(e.data))          ║
+ * ╟───────────────────────────────────────────────────────────╢
+ * ║  HTTP API (for bots / scripts):                                 ║
+ * ║    GET /api/state               → full game state (JSON)         ║
+ * ║    GET /cmd?code=...&move=UP    → move your robot                ║
+ * ╟───────────────────────────────────────────────────────────╢
+ * ║  SERVER LOGIC (study to build a better bot!):                   ║
+ * ║    GET /server.js               → full server source             ║
+ * ╟───────────────────────────────────────────────────────────╢
+ * ║  STATE FORMAT (received every tick):                            ║
+ * ║    { type:'state', running, paused, step,                       ║
+ * ║      robots:    [{ name, x, y, score }],                        ║
+ * ║      obstacles: [[x, y], ...],                                  ║
+ * ║      prizes:    [{ x, y, value }] }    ← collect these!         ║
+ * ╟───────────────────────────────────────────────────────────╢
+ * ║  GOAL: Move onto prize squares (circles with numbers 1–9).     ║
+ * ║        Collect the highest total value. Obstacles block you.    ║
+ * ╚═══════════════════════════════════════════════════════════╝
+ */
+</script>
+
+<div id="app">
+  <header>
+    <div id="dot"></div>
+    <h1>ROBOWAR</h1>
+    <span id="stxt">CONNECTING…</span>
+    <span class="spacer"></span>
+    <button class="hbtn" onclick="document.getElementById('adm').classList.toggle('open')">⚙ ADMIN</button>
+  </header>
+
+  <div id="wrap">
+    <div id="board">
+      <div id="spl">
+        <h2>ROBOWAR</h2>
+        <p>GRID ROBOT RACE — COLLECT PRIZES</p>
+        <button class="btn-ent" onclick="dismissSplash()">ENTER</button>
+      </div>
+      <canvas id="canvas"></canvas>
+      <div id="sc"><h3>SCORE</h3><div id="sl">—</div></div>
+      <div id="adm">
+        <h3>⚙ ADMIN</h3>
+        <input id="ap" type="password" placeholder="admin password" autocomplete="off"/>
+        <div class="abts">
+          <button class="abt abt-s" onclick="adminAct('start')">▶ START</button>
+          <button class="abt abt-p" onclick="adminAct('pause')">⏸ PAUSE</button>
+          <button class="abt abt-r" onclick="adminAct('reset')">↺ RESET</button>
+          <button id="mbtn" class="abt abt-m" onclick="adminAct('music')">♪ MUSIC</button>
+        </div>
+        <div id="afb"></div>
+      </div>
+      <div id="toast"></div>
+    </div>
+  </div>
+
+  <footer>
+    <span id="fstat">STATUS: IDLE</span>
+    <span id="fpri">PRIZES: —</span>
+    <span id="ftick">TICK: 0</span>
+  </footer>
+</div>
+
+<audio id="bgm" src="/music.mp3" loop preload="auto"></audio>
+
+<script>
+// ── Canvas ────────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+let W = 0, H = 0, GRID_W = 38, GRID_H = 25;
+
+// ── State ────────────────────────────────────────────────────────────────────
+let gameState   = null;
+let wsConnected = false;
+
+function resize() {
+    const board = document.getElementById('board');
+    const scW   = 240; // scoreboard width + margin
+    W = Math.max(100, board.clientWidth  - scW);
+    H = Math.max(100, board.clientHeight - 4);
+    canvas.width  = W;
+    canvas.height = H;
+    if (gameState) render();
+}
+new ResizeObserver(resize).observe(document.getElementById('board'));
+resize();
+
+// Player colors (22 distinct)
+const COLORS = [
+    '#00f2fe','#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6b9d',
+    '#c77dff','#f77f00','#aef359','#fb5607','#8ecae6','#ffb703',
+    '#06d6a0','#ef476f','#118ab2','#ffd166','#e9c46a','#264653',
+    '#2a9d8f','#e76f51','#a8dadc','#457b9d',
+];
+
+// Pre-build color map for player names (filled after first state)
+const playerColor = {};
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+const WS = location.protocol === 'https:' ? 'wss:' : 'ws:';
+let ws;
+function connect() {
+    ws = new WebSocket(`${WS}//${location.host}`);
+    ws.onopen  = () => { wsConnected = true; setDot('on', 'CONNECTED'); };
+    ws.onmessage = (e) => { try { handle(JSON.parse(e.data)); } catch {} };
+    ws.onclose = () => { wsConnected = false; setDot('', 'RECONNECTING…'); setTimeout(connect, 2000); };
+    ws.onerror = () => ws.close();
+}
+connect();
+
+function handle(msg) {
+    if (msg.type === 'state') {
+        gameState = msg;
+        // Build color map from robots array order (stable)
+        msg.robots.forEach((r, i) => { if (!playerColor[r.name]) playerColor[r.name] = COLORS[i % COLORS.length]; });
+        updateHUD(); render();
+    } else if (msg.type === 'auth_result') {
+        showToast(msg.ok ? `Auth: ${msg.name}` : `Auth failed: ${msg.message}`);
+    } else if (msg.type === 'admin_event') {
+        if (msg.action === 'music') { toggleMusic(); setFeedback('♪'); return; }
+        showToast(`Admin: ${msg.action.toUpperCase()}`);
+        setFeedback(`✓ ${msg.action}`);
+        if (msg.action === 'start' && _pendingAdminStart) { _pendingAdminStart = false; startRec(); }
+        if (msg.action === 'reset') stopRec();
+    } else if (msg.type === 'game_over') {
+        showToast(`🏆 WINNER: ${msg.winner}`); stopRec();
+    } else if (msg.type === 'error') {
+        showToast(msg.message); setFeedback(`✗ ${msg.message}`);
+    }
+}
+
+// ── HUD ───────────────────────────────────────────────────────────────────────
+function updateHUD() {
+    if (!gameState) return;
+    const { running, paused, step, robots, prizes } = gameState;
+    document.getElementById('ftick').textContent = `TICK: ${step}`;
+    document.getElementById('fpri').textContent  = `PRIZES: ${prizes.length}`;
+    let label = 'IDLE';
+    if (running && !paused) { label = 'RUNNING'; setDot('run', 'RUNNING'); }
+    else if (paused)         { label = 'PAUSED';  setDot('on', 'PAUSED'); }
+    else                     { setDot('on', 'CONNECTED'); }
+    document.getElementById('fstat').textContent = `STATUS: ${label}`;
+
+    const html = robots.map((r, i) =>
+        `<div class="sr"><span class="sn" style="color:${playerColor[r.name]||'#fff'}">${r.name}</span><span class="sv">${r.score}</span></div>`
+    ).join('');
+    document.getElementById('sl').innerHTML = html || '—';
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#0a0a12';
+    ctx.fillRect(0, 0, W, H);
+    if (!gameState) return;
+
+    const cw = W / GRID_W, ch = H / GRID_H;
+
+    // Grid lines
+    ctx.strokeStyle = '#15152a';
+    ctx.lineWidth = 0.4;
+    for (let x = 0; x <= GRID_W; x++) { ctx.beginPath(); ctx.moveTo(x*cw,0); ctx.lineTo(x*cw,H); ctx.stroke(); }
+    for (let y = 0; y <= GRID_H; y++) { ctx.beginPath(); ctx.moveTo(0,y*ch); ctx.lineTo(W,y*ch); ctx.stroke(); }
+
+    // Obstacles
+    ctx.fillStyle = '#1e1e3a';
+    for (const [ox, oy] of gameState.obstacles) {
+        ctx.fillRect(ox*cw+0.5, (GRID_H-1-oy)*ch+0.5, cw-1, ch-1);
+    }
+
+    // Prizes
+    for (const pr of gameState.prizes) {
+        const px = (pr.x + 0.5) * cw, py = (GRID_H - 1 - pr.y + 0.5) * ch;
+        const r  = Math.min(cw, ch) * 0.38;
+        const hue = 60 + (pr.value / 9) * 60; // yellow→green
+        ctx.fillStyle = `hsl(${hue},85%,58%)`;
+        ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.font = `bold ${Math.floor(r * 1.7)}px Courier New`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(pr.value, px, py);
+    }
+
+    // Robots
+    for (const r of gameState.robots) {
+        const rx = (r.x + 0.5) * cw, ry = (GRID_H - 1 - r.y + 0.5) * ch;
+        const rr  = Math.min(cw, ch) * 0.44;
+        const col = playerColor[r.name] || '#fff';
+        // Glow
+        ctx.shadowColor = col; ctx.shadowBlur = 10;
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(rx, ry, rr, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#000';
+        ctx.font = `bold ${Math.floor(rr * 1.5)}px Courier New`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(r.name[0], rx, ry);
+        // Name below robot
+        ctx.fillStyle = col;
+        ctx.font = `bold ${Math.floor(rr * 0.75)}px Courier New`;
+        ctx.textBaseline = 'top';
+        ctx.fillText(r.name, rx, ry + rr + 2);
+    }
+}
+
+// ── Admin ──────────────────────────────────────────────────────────────────────
+function adminAct(action) {
+    if (!wsConnected) { showToast('Not connected'); return; }
+    if (action === 'start') _pendingAdminStart = true;
+    ws.send(JSON.stringify({ type:'admin', password: document.getElementById('ap').value, action }));
+}
+function setFeedback(t) {
+    const el = document.getElementById('afb'); el.textContent = t;
+    setTimeout(() => el.textContent = '', 3000);
+}
+
+// ── Splash ────────────────────────────────────────────────────────────────────
+function dismissSplash() {
+    document.getElementById('spl').style.display = 'none';
+}
+
+// ── Music ─────────────────────────────────────────────────────────────────────
+function toggleMusic() {
+    const bgm = document.getElementById('bgm');
+    bgm.paused ? (bgm.currentTime=0, bgm.play().then(()=>updateMusicBtn(true)).catch(()=>{})) : (bgm.pause(), updateMusicBtn(false));
+}
+function updateMusicBtn(on) {
+    const b = document.getElementById('mbtn'); b.textContent = on ? '♪ ON' : '♪ OFF';
+    b.classList.toggle('play', on);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function setDot(cls, txt) {
+    document.getElementById('dot').className = cls;
+    document.getElementById('stxt').textContent = txt;
+}
+let _tt = null;
+function showToast(t) {
+    const el = document.getElementById('toast'); el.textContent = t; el.classList.add('show');
+    clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// Console helpers
+// ── Video Recording ───────────────────────────────────────────────────────────
+let _pendingAdminStart = false, _recorder = null, _recChunks = [];
+function startRec() {
+    if (_recorder && _recorder.state !== 'inactive') return;
+    _recChunks = [];
+    try {
+        const stream = canvas.captureStream(30);
+        const mime = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']
+            .find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
+        _recorder = new MediaRecorder(stream, {mimeType: mime});
+        _recorder.ondataavailable = e => { if (e.data.size > 0) _recChunks.push(e.data); };
+        _recorder.onstop = () => {
+            const blob = new Blob(_recChunks, {type: _recorder.mimeType});
+            const name = `ROBOWAR_${new Date().toISOString().replace(/[:.]/g,'-')}.webm`;
+            const a = Object.assign(document.createElement('a'), {href: URL.createObjectURL(blob), download: name});
+            a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+            showToast('📹 Recording saved');
+        };
+        _recorder.start(1000);
+        showToast('🔴 Recording started');
+    } catch(e) { showToast('⚠ Recording not supported'); }
+}
+function stopRec() {
+    if (_recorder && _recorder.state === 'recording') { _recorder.stop(); }
+}
+
+window.auth = (code) => ws && ws.readyState === 1 && ws.send(JSON.stringify({ type:'auth', code }));
+window.move = (m)    => ws && ws.readyState === 1 && ws.send(JSON.stringify({ type:'cmd',  move: m }));
+</script>
+</body></html>
