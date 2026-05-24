@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>מקדם ביטחון למסבך</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, rgba(59, 130, 246, 0.18), transparent 25%),
+        linear-gradient(180deg, #0f172a 0%, #111827 55%, #1f2937 100%);
+      padding: 24px;
+    }
+
+    .shell {
+      max-width: 940px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.6rem, 2vw + 1rem, 2.2rem);
+    }
+
+    .subtitle {
+      color: #cbd5e1;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 18px 38px rgba(15, 23, 42, 0.28);
+      margin-bottom: 20px;
+    }
+
+    .controls {
+      display: grid;
+      gap: 14px;
+    }
+
+    label {
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      background: #111827;
+      color: #f8fafc;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(90deg, #38bdf8, #6366f1);
+      color: #0f172a;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      opacity: 0.98;
+    }
+
+    .status {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      font-weight: 600;
+      display: none;
+    }
+
+    .status.loading {
+      background: rgba(59, 130, 246, 0.14);
+      color: #bae6fd;
+      display: block;
+    }
+
+    .status.error {
+      background: rgba(248, 113, 113, 0.16);
+      color: #fecaca;
+      display: block;
+    }
+
+    .status.ok {
+      background: rgba(52, 211, 153, 0.16);
+      color: #bbf7d0;
+      display: block;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      border-radius: 18px;
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .metric-label {
+      font-size: 0.92rem;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .meter {
+      height: 12px;
+      background: rgba(148, 163, 184, 0.14);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .meter-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #34d399, #22c55e);
+      border-radius: inherit;
+      transition: width 0.3s ease;
+    }
+
+    .small-note {
+      color: #cbd5e1;
+      font-size: 0.95rem;
+      margin-top: 12px;
+      line-height: 1.6;
+    }
+
+    .member-list {
+      margin-top: 18px;
+    }
+
+    .member-list table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    .member-list th,
+    .member-list td {
+      padding: 10px 12px;
+      text-align: right;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .member-list th {
+      text-align: right;
+      color: #cbd5e1;
+      font-weight: 700;
+    }
+
+    .member-list td:first-child,
+    .member-list th:first-child {
+      text-align: right;
+    }
+
+    .warning {
+      color: #fca5a5;
+    }
+
+    .safe {
+      color: #86efac;
+    }
+
+    .unsafe {
+      color: #fca5a5;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <h1>מקדם ביטחון למסבך</h1>
+    <p class="subtitle">
+      הזן כתובת API, ולוחץ על <strong>חשב מקדם ביטחון</strong>. הדף יחשב את מקדם הביטחון לפי אותו מודל פיזיקלי שמשמש את הפותר הנוכחי ויציג את התוצאה בצורה ברורה.
+    </p>
+
+    <div class="card">
+      <div class="controls">
+        <div>
+          <label for="urlInput">כתובת ה-API</label>
+          <input id="urlInput" type="text" value="http://192.168.60.104:8451/api/problem" />
+        </div>
+        <div>
+          <button id="runBtn" type="button">חשב מקדם ביטחון</button>
+        </div>
+        <div id="statusBox" class="status"></div>
+      </div>
+
+      <div class="result-grid" id="resultGrid" hidden>
+        <div class="metric">
+          <div class="metric-label">מקדם הביטחון המינימלי</div>
+          <div class="metric-value" id="minSafetyValue">-</div>
+          <div class="meter"><div class="meter-fill" id="meterFill"></div></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">מצב</div>
+          <div class="metric-value" id="statusValue">-</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">מספר המוטים</div>
+          <div class="metric-value" id="memberCount">-</div>
+        </div>
+      </div>
+
+      <div class="small-note" id="summaryNote"></div>
+
+      <div class="member-list" id="memberList" hidden>
+        <table>
+          <thead>
+            <tr>
+              <th>מוט</th>
+              <th>כוח</th>
+              <th>מאמץ</th>
+              <th>SF</th>
+              <th>סוג</th>
+            </tr>
+          </thead>
+          <tbody id="memberBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_E_PA = 200e9;
+
+    const ui = {
+      urlInput: document.getElementById('urlInput'),
+      runBtn: document.getElementById('runBtn'),
+      statusBox: document.getElementById('statusBox'),
+      resultGrid: document.getElementById('resultGrid'),
+      minSafetyValue: document.getElementById('minSafetyValue'),
+      statusValue: document.getElementById('statusValue'),
+      memberCount: document.getElementById('memberCount'),
+      meterFill: document.getElementById('meterFill'),
+      summaryNote: document.getElementById('summaryNote'),
+      memberList: document.getElementById('memberList'),
+      memberBody: document.getElementById('memberBody')
+    };
+
+    function setStatus(message, tone) {
+      ui.statusBox.textContent = message;
+      ui.statusBox.className = `status ${tone}`;
+    }
+
+    function formatNumber(value) {
+      return Number.isFinite(value) ? value.toFixed(3) : '∞';
+    }
+
+    function gaussianElim(K, F, n) {
+      for (let col = 0; col < n; col += 1) {
+        let maxRow = col;
+        for (let row = col + 1; row < n; row += 1) {
+          if (Math.abs(K[row * n + col]) > Math.abs(K[maxRow * n + col])) {
+            maxRow = row;
+          }
+        }
+
+        for (let k = 0; k < n; k += 1) {
+          [K[col * n + k], K[maxRow * n + k]] = [K[maxRow * n + k], K[col * n + k]];
+        }
+        [F[col], F[maxRow]] = [F[maxRow], F[col]];
+
+        for (let row = col + 1; row < n; row += 1) {
+          if (Math.abs(K[col * n + col]) < 1e-14) {
+            continue;
+          }
+          const factor = K[row * n + col] / K[col * n + col];
+          for (let k = col; k < n; k += 1) {
+            K[row * n + k] -= factor * K[col * n + k];
+          }
+          F[row] -= factor * F[col];
+        }
+      }
+
+      const u = new Array(n).fill(0);
+      for (let i = n - 1; i >= 0; i -= 1) {
+        if (Math.abs(K[i * n + i]) < 1e-14) {
+          u[i] = 0;
+          continue;
+        }
+        let sum = F[i];
+        for (let j = i + 1; j < n; j += 1) {
+          sum -= K[i * n + j] * u[j];
+        }
+        u[i] = sum / K[i * n + i];
+      }
+
+      return u;
+    }
+
+    function solveProblem(problem) {
+      const {
+        nodes,
+        members,
+        boundary,
+        loads,
+        rodSide,
+        yieldMPa,
+        E_PA = DEFAULT_E_PA
+      } = problem;
+
+      const n = nodes.length;
+      const A = rodSide * rodSide;
+      const ndof = 2 * n;
+
+      const fixed = new Set();
+      nodes.forEach(([x, y], index) => {
+        const pinned =
+          (boundary.x_min !== null && x <= boundary.x_min) ||
+          (boundary.x_max !== null && x >= boundary.x_max) ||
+          (boundary.y_min !== null && y <= boundary.y_min) ||
+          (boundary.y_max !== null && y >= boundary.y_max);
+
+        if (pinned) {
+          fixed.add(2 * index);
+          fixed.add(2 * index + 1);
+        }
+      });
+
+      const K = new Array(ndof * ndof).fill(0);
+      const add = (row, col, value) => {
+        K[row * ndof + col] += value;
+      };
+
+      members.forEach(([a, b]) => {
+        const [x1, y1] = nodes[a];
+        const [x2, y2] = nodes[b];
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const L = Math.hypot(dx, dy);
+        const c = dx / L;
+        const s = dy / L;
+        const k = E_PA * A / L;
+        const km = [
+          c * c, c * s, -c * c, -c * s,
+          c * s, s * s, -c * s, -s * s,
+          -c * c, -c * s, c * c, c * s,
+          -c * s, -s * s, c * s, s * s
+        ];
+        const dofs = [2 * a, 2 * a + 1, 2 * b, 2 * b + 1];
+
+        for (let r = 0; r < 4; r += 1) {
+          for (let col = 0; col < 4; col += 1) {
+            add(dofs[r], dofs[col], k * km[r * 4 + col]);
+          }
+        }
+      });
+
+      const F = new Array(ndof).fill(0);
+      loads.forEach(([node, fx, fy]) => {
+        F[2 * node] += fx;
+        F[2 * node + 1] += fy;
+      });
+
+      fixed.forEach((dof) => {
+        for (let i = 0; i < ndof; i += 1) {
+          K[dof * ndof + i] = 0;
+          K[i * ndof + dof] = 0;
+        }
+        K[dof * ndof + dof] = 1;
+        F[dof] = 0;
+      });
+
+      const u = gaussianElim(K.slice(), F.slice(), ndof);
+
+      const membersData = members.map(([a, b], idx) => {
+        const [x1, y1] = nodes[a];
+        const [x2, y2] = nodes[b];
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const L = Math.hypot(dx, dy);
+        const c = dx / L;
+        const s = dy / L;
+        const elongation = (u[2 * b] - u[2 * a]) * c + (u[2 * b + 1] - u[2 * a + 1]) * s;
+        const force = E_PA * A / L * elongation;
+        const stressPa = Math.abs(force) / A;
+        const stressMPa = stressPa / 1e6;
+        const safetyFactor = stressPa > 0 ? yieldMPa / stressMPa : Infinity;
+
+        return {
+          idx,
+          a,
+          b,
+          length: L,
+          force,
+          stressPa,
+          stressMPa,
+          safetyFactor,
+          type: force >= 0 ? 'מתח' : 'לחץ'
+        };
+      });
+
+      const nodeForce = Array.from({ length: n }, () => [0, 0]);
+      members.forEach(([a, b], idx) => {
+        const [x1, y1] = nodes[a];
+        const [x2, y2] = nodes[b];
+        const L = Math.hypot(x2 - x1, y2 - y1);
+        const cx = (x2 - x1) / L;
+        const cy = (y2 - y1) / L;
+        const axial = membersData[idx].force;
+
+        nodeForce[a][0] += axial * cx;
+        nodeForce[a][1] += axial * cy;
+        nodeForce[b][0] -= axial * cx;
+        nodeForce[b][1] -= axial * cy;
+      });
+
+      const appliedAt = {};
+      loads.forEach(([node, fx, fy]) => {
+        appliedAt[node] = [(appliedAt[node]?.[0] || 0) + fx, (appliedAt[node]?.[1] || 0) + fy];
+      });
+
+      const reactions = [];
+      fixed.forEach((dof) => {
+        const node = Math.floor(dof / 2);
+        if (!reactions.find((reaction) => reaction.node === node)) {
+          const app = appliedAt[node] || [0, 0];
+          reactions.push({
+            node,
+            Rx: -(nodeForce[node][0] + app[0]),
+            Ry: -(nodeForce[node][1] + app[1])
+          });
+        }
+      });
+
+      const minSafetyFactor = membersData.reduce((best, member) => {
+        if (!Number.isFinite(member.safetyFactor)) {
+          return best;
+        }
+        return member.safetyFactor < best ? member.safetyFactor : best;
+      }, Infinity);
+
+      return {
+        minSafetyFactor,
+        members: membersData,
+        reactions,
+        safe: Number.isFinite(minSafetyFactor) && minSafetyFactor >= 1
+      };
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return await response.json();
+    }
+
+    function renderResult(result) {
+      ui.resultGrid.hidden = false;
+      ui.memberList.hidden = false;
+      ui.minSafetyValue.textContent = Number.isFinite(result.minSafetyFactor)
+        ? result.minSafetyFactor.toFixed(3)
+        : '∞';
+      ui.statusValue.textContent = result.safe ? 'בטוח' : 'לא בטוח';
+      ui.statusValue.className = `metric-value ${result.safe ? 'safe' : 'unsafe'}`;
+      ui.memberCount.textContent = String(result.members.length);
+
+      const clamped = Math.max(0, Math.min(1, result.safe ? Math.min(1, result.minSafetyFactor / 3) : 0.25));
+      ui.meterFill.style.width = `${clamped * 100}%`;
+
+      ui.summaryNote.innerHTML = result.safe
+        ? `<strong>תוצאה:</strong> מקדם הביטחון המינימלי גדול מ-1, לכן המבנה עומד בתנאים הנוכחיים.`
+        : `<strong>אזהרה:</strong> מקדם הביטחון המינימלי קטן מ-1, ולכן יש לבדוק מחדש את העומסים/חתך/החומר.`;
+
+      ui.memberBody.innerHTML = '';
+      result.members.forEach((member) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${member.idx}</td>
+          <td>${member.force.toFixed(2)} N</td>
+          <td>${member.stressMPa.toFixed(3)} MPa</td>
+          <td class="${Number.isFinite(member.safetyFactor) && member.safetyFactor < 1 ? 'warning' : ''}">${formatNumber(member.safetyFactor)}</td>
+          <td>${member.type}</td>
+        `;
+        ui.memberBody.appendChild(row);
+      });
+    }
+
+    async function runAnalysis() {
+      const url = ui.urlInput.value.trim();
+      if (!url) {
+        setStatus('אנא הזן כתובת API.', 'error');
+        return;
+      }
+
+      setStatus('מחשב…', 'loading');
+
+      try {
+        const rawProblem = await fetchJson(url);
+        const problem = {
+          nodes: rawProblem.nodes,
+          members: rawProblem.members,
+          boundary: rawProblem.boundary,
+          loads: rawProblem.loads,
+          rodSide: rawProblem.rodSide,
+          yieldMPa: rawProblem.yieldMPa,
+          E_PA: rawProblem.E_PA || DEFAULT_E_PA
+        };
+        const result = solveProblem(problem);
+        renderResult(result);
+        setStatus('החישוב הושלם.', 'ok');
+      } catch (error) {
+        console.error(error);
+        setStatus(`שגיאה: ${error.message}`, 'error');
+      }
+    }
+
+    ui.runBtn.addEventListener('click', runAnalysis);
+    ui.urlInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        runAnalysis();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fruit Ninja</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at top, #1f2937, #0f172a 70%);
+      color: #f8fafc;
+    }
+
+    .game-shell {
+      width: min(92vw, 900px);
+      display: grid;
+      gap: 16px;
+      justify-items: center;
+    }
+
+    .hud {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hud-panel {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 14px;
+      padding: 10px 16px;
+      min-width: 140px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.35);
+    }
+
+    .hud-panel strong {
+      display: block;
+      font-size: 0.9rem;
+      color: #93c5fd;
+      margin-bottom: 4px;
+    }
+
+    canvas {
+      width: min(92vw, 800px);
+      height: min(68vw, 520px);
+      max-height: 520px;
+      border-radius: 24px;
+      border: 2px solid rgba(244, 114, 182, 0.3);
+      background: linear-gradient(180deg, #0ea5e9 0%, #7dd3fc 55%, #dcfce7 100%);
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.45);
+      touch-action: none;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(135deg, #f59e0b, #f97316);
+      color: #111827;
+      box-shadow: 0 10px 28px rgba(249, 115, 22, 0.3);
+    }
+
+    .hint {
+      text-align: center;
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+
+    .difficulty-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #e2e8f0;
+      font-weight: 700;
+    }
+
+    .difficulty-wrap select {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: #0f172a;
+      color: #f8fafc;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    @media (max-width: 700px) {
+      .game-shell {
+        width: 100%;
+      }
+
+      canvas {
+        width: calc(100vw - 24px);
+        height: 65vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-shell">
+    <div class="hud">
+      <div class="hud-panel">
+        <strong>ניקוד</strong>
+        <span id="score">0</span>
+      </div>
+      <div class="hud-panel">
+        <strong>חיים</strong>
+        <span id="lives">3</span>
+      </div>
+      <div class="hud-panel">
+        <strong>רמה</strong>
+        <span id="level">בינונית</span>
+      </div>
+      <div class="hud-panel difficulty-wrap">
+        <label for="difficultySelect">בחירת רמה</label>
+        <select id="difficultySelect">
+          <option value="low">נמוכה</option>
+          <option value="medium" selected>בינונית</option>
+          <option value="high">גבוהה</option>
+        </select>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="520"></canvas>
+
+    <div class="controls">
+      <button id="restartBtn" type="button">התחל מחדש</button>
+    </div>
+
+    <div class="hint">
+      גררו על המסך כדי לחתוך פירות. פגיעה במזלג או מסך רקע תפחית חיים.<br>
+      קפצו אחר הפרי הכי מהר שניתן כדי להשיג ניקוד גבוה יותר.
+    </div>
+  </div>
+
+  <script src="fruit-ninja.js"></script>
+</body>
+</html>
