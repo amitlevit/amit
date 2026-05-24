@@ -59,60 +59,123 @@ const PLAYERS = [
 const MOVES   = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
 const DELTAS  = { UP: [0, 1], DOWN: [0, -1], LEFT: [-1, 0], RIGHT: [1, 0] };
 
-function buildBlockedSet(obstacles, robots, selfName) {
+const key = (x, y) => `${x},${y}`;
+
+function buildBlockedSet(obstacles) {
     const blocked = new Set();
 
     for (const [x, y] of obstacles || []) {
-        blocked.add(`${x},${y}`);
-    }
-
-    for (const robot of robots || []) {
-        if (!robot || robot.name === selfName) continue;
-        blocked.add(`${robot.x},${robot.y}`);
+        blocked.add(key(x, y));
     }
 
     return blocked;
 }
 
-// ── BFS: returns first move toward the target, or null if unreachable ─────────
+function buildEnemyBlockedSet(robots, selfName) {
+    const blocked = new Set();
+
+    for (const robot of robots || []) {
+        if (!robot || robot.name === selfName) continue;
+        blocked.add(key(robot.x, robot.y));
+    }
+
+    return blocked;
+}
+
+function getLegalMoves(x, y, blockedSet, W, H) {
+    const legal = [];
+
+    for (const move of MOVES) {
+        const [dx, dy] = DELTAS[move];
+        const nx = x + dx;
+        const ny = y + dy;
+
+        if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+        if (blockedSet.has(key(nx, ny))) continue;
+
+        legal.push(move);
+    }
+
+    return legal;
+}
+
+function randomLegalMove(robot, blockedSet, W, H) {
+    const legal = getLegalMoves(robot.x, robot.y, blockedSet, W, H);
+    if (!legal.length) return 'STAY';
+
+    return legal[Math.floor(Math.random() * legal.length)];
+}
+
 function bfsMove(sx, sy, tx, ty, blockedSet, W, H) {
-    if (sx === tx && sy === ty) return 'STAY';
-    const key   = (x, y) => `${x},${y}`;
-    const queue = [[sx, sy, null]];   // [x, y, firstMove]
+    if (sx === tx && sy === ty) {
+        return { move: 'STAY', distance: 0, reachable: true };
+    }
+
+    const queue = [[sx, sy, null, 0]];
     const seen  = new Set([key(sx, sy)]);
 
     while (queue.length) {
-        const [x, y, first] = queue.shift();
+        const [x, y, first, depth] = queue.shift();
+
         for (const move of MOVES) {
             const [dx, dy] = DELTAS[move];
-            const nx = x + dx, ny = y + dy;
+            const nx = x + dx;
+            const ny = y + dy;
+
             if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
-            const k = key(nx, ny);
-            if (seen.has(k) || blockedSet.has(k)) continue;
+            const posKey = key(nx, ny);
+            if (seen.has(posKey) || blockedSet.has(posKey)) continue;
+
             const fm = first || move;
-            if (nx === tx && ny === ty) return fm;
-            seen.add(k);
-            queue.push([nx, ny, fm]);
+            if (nx === tx && ny === ty) {
+                return { move: fm, distance: depth + 1, reachable: true };
+            }
+
+            seen.add(posKey);
+            queue.push([nx, ny, fm, depth + 1]);
         }
     }
-    return null;   // unreachable
+
+    return { move: 'STAY', distance: Infinity, reachable: false };
 }
 
-/**
- * Pick the best target prize and return the first BFS move toward it.
- * Prizes are ranked by value / manhattan_distance (higher = better).
- */
-function chooseMove(robot, prizes, blockedSet, W, H) {
-    if (!prizes.length) return 'STAY';
-
-    const ranked = prizes
-        .map(p => ({ p, score: p.value / (Math.abs(p.x - robot.x) + Math.abs(p.y - robot.y) + 1) }))
-        .sort((a, b) => b.score - a.score);
-
-    for (const { p } of ranked) {
-        const move = bfsMove(robot.x, robot.y, p.x, p.y, blockedSet, W, H);
-        if (move && move !== 'STAY') return move;
+function chooseMove(robot, prizes, blockedSet, robots, W, H) {
+    const dynamicBlocked = new Set(blockedSet);
+    const enemyBlocked = buildEnemyBlockedSet(robots, robot.name);
+    for (const blockedKey of enemyBlocked) {
+        dynamicBlocked.add(blockedKey);
     }
+
+    if (!prizes.length) {
+        return randomLegalMove(robot, dynamicBlocked, W, H);
+    }
+
+    const reachable = [];
+
+    for (const prize of prizes) {
+        if (dynamicBlocked.has(key(prize.x, prize.y))) continue;
+
+        const result = bfsMove(robot.x, robot.y, prize.x, prize.y, dynamicBlocked, W, H);
+        if (!result.reachable) continue;
+
+        reachable.push({
+            prize,
+            move: result.move,
+            distance: result.distance,
+            score: prize.value / result.distance,
+        });
+    }
+
+    if (reachable.length) {
+        reachable.sort((a, b) => b.score - a.score || a.distance - b.distance);
+        return reachable[0].move;
+    }
+
+    const fallbackLegal = getLegalMoves(robot.x, robot.y, dynamicBlocked, W, H);
+    if (fallbackLegal.length) {
+        return fallbackLegal[Math.floor(Math.random() * fallbackLegal.length)];
+    }
+
     return 'STAY';
 }
 
@@ -160,8 +223,8 @@ function connectPlayer(player) {
                 if (!robot) return;
                 gridW   = msg.grid?.width  || 38;
                 gridH   = msg.grid?.height || 25;
-                const blockedSet = buildBlockedSet(msg.obstacles, msg.robots, myName);
-                const move = chooseMove(robot, msg.prizes || [], blockedSet, gridW, gridH);
+                const blockedSet = buildBlockedSet(msg.obstacles);
+                const move = chooseMove(robot, msg.prizes || [], blockedSet, msg.robots || [], gridW, gridH);
                 ws.send(JSON.stringify({ type: 'cmd', move }));
                 cmdSent++;
             }

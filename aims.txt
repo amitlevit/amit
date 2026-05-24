@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AIM</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060608;--surf:#0e0e14;--brd:#1e1e2e;--acc:#f472b6;--red:#dc2626;--blue:#2563eb;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;--txt:#e2e8f0;--mut:#64748b;--font:'Courier New',monospace}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--font);overflow:hidden}
+#app{display:grid;grid-template-rows:46px 52px 1fr 36px;height:100vh}
+header{display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--surf);border-bottom:1px solid var(--brd)}
+header h1{font-size:.95rem;letter-spacing:4px;color:var(--acc);text-shadow:0 0 10px var(--acc)}
+#dot{width:9px;height:9px;border-radius:50%;background:var(--err);box-shadow:0 0 5px var(--err);transition:.3s}
+#dot.on{background:var(--ok);box-shadow:0 0 6px var(--ok)} #dot.run{background:var(--acc);box-shadow:0 0 10px var(--acc)}
+#stxt{font-size:2.1rem;color:var(--mut)}.spacer{flex:1}
+.hbtn{background:none;border:1px solid var(--brd);border-radius:3px;color:var(--mut);padding:2px 8px;font-size:2.1rem;cursor:pointer;font-family:var(--font)}
+.hbtn:hover,.hbtn.play{color:var(--acc);border-color:var(--acc)}
+#wrap{display:flex;flex-direction:row;overflow:hidden}
+#game-area{position:relative;flex:1;overflow:hidden}
+#canvas{display:block;width:100%;height:100%}
+/* score bar */
+#scorebar{height:52px;display:flex;align-items:center;justify-content:center;gap:40px;background:var(--surf);border-bottom:1px solid var(--brd);font-size:2rem;letter-spacing:4px}
+.team-score{font-size:2.5rem;font-weight:bold}
+.team-red{color:var(--red);text-shadow:0 0 8px var(--red)}
+.team-blue{color:var(--blue);text-shadow:0 0 8px var(--blue)}
+#divider{color:var(--mut)}
+#sc{flex-shrink:0;width:300px;background:rgba(14,14,20,.95);border-left:1px solid var(--brd);padding:12px 14px;overflow-y:auto;font-size:2rem}
+#sc h3{color:var(--acc);letter-spacing:2px;margin-bottom:4px;font-size:1.9rem}
+.sr{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px solid #111}
+.sr .sn{color:var(--txt)}.sr .sv{color:var(--mut);font-size:1.8rem}
+#adm{display:none;position:absolute;top:48px;left:50%;transform:translateX(-50%);background:var(--surf);border:1px solid #7c3aed;border-radius:7px;padding:14px 18px;flex-direction:column;gap:8px;z-index:200;min-width:560px;max-height:80vh;overflow-y:auto;box-shadow:0 0 24px rgba(124,58,237,.35)}
+#adm.open{display:flex}
+#adm h3{color:#7c3aed;letter-spacing:3px;font-size:2.25rem;text-align:center}
+#ap{background:var(--bg);border:1px solid var(--brd);border-radius:3px;color:var(--txt);padding:5px 9px;font-family:var(--font);font-size:.78rem;outline:none}
+#ap:focus{border-color:#7c3aed}
+.abts{display:flex;gap:6px}
+.abt{flex:1;padding:6px;border:none;border-radius:3px;font-family:var(--font);font-size:.72rem;cursor:pointer}.abt:hover{opacity:.82}
+.abt-s{background:var(--ok);color:#000}.abt-p{background:var(--warn);color:#000}.abt-r{background:var(--err);color:#fff}.abt-m{background:#7c3aed;color:#fff}
+#afb{font-size:.65rem;color:var(--mut);text-align:center;min-height:1em}
+#role-section{margin-top:6px}
+#role-section h4{color:#a78bfa;font-size:.72rem;letter-spacing:2px;margin-bottom:6px}
+#role-table{width:100%;border-collapse:collapse;font-size:.72rem}
+#role-table th{color:var(--mut);font-size:.62rem;letter-spacing:1px;padding:3px 5px;text-align:center;border-bottom:1px solid var(--brd)}
+#role-table td{padding:3px 5px;text-align:center;border-bottom:1px solid #0d0d1a}
+#role-table td:first-child{text-align:left;color:var(--txt);font-weight:bold}
+#role-table select{background:var(--bg);border:1px solid var(--brd);color:var(--txt);font-family:var(--font);font-size:.68rem;padding:2px 4px;border-radius:3px;cursor:pointer;width:100%}
+.role-ra{color:#dc2626}.role-rg{color:#f87171}.role-ba{color:#2563eb}.role-bg{color:#60a5fa}.role-out{color:var(--mut)}
+.abt-assign{background:#7c3aed;color:#fff;width:100%;margin-top:6px}
+#spl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(6,6,8,.97);z-index:100;gap:20px}
+#spl h2{font-size:clamp(1.2rem,4vw,2.8rem);letter-spacing:6px;color:var(--acc);text-shadow:0 0 20px var(--acc);animation:pulse 2s infinite}
+#spl .teams{display:flex;gap:40px;font-size:.8rem}
+#spl .tr{color:var(--red)}.spl .tb{color:var(--blue)}
+.btn-ent{background:transparent;border:1px solid var(--acc);color:var(--acc);padding:9px 32px;border-radius:3px;font-family:var(--font);font-size:.85rem;letter-spacing:3px;cursor:pointer}
+.btn-ent:hover{background:rgba(244,114,182,.1);box-shadow:0 0 16px var(--acc)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+#toast{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);background:var(--surf);border:1px solid var(--acc);border-radius:5px;padding:7px 18px;font-size:.75rem;color:var(--acc);opacity:0;pointer-events:none;transition:opacity .3s;z-index:300;white-space:nowrap}
+#toast.show{opacity:1}
+footer{display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--surf);border-top:1px solid var(--brd);font-size:.65rem;color:var(--mut)}
+#ftick{margin-left:auto}
+</style>
+</head><body>
+
+<script id="player-codes">
+/*
+ * ╔══════════ AIM — HOW TO PLAY ══════════════════════════════════╗
+ * ║  Visible via F12 → Sources                                       ║
+ * ╟───────────────────────────────────────────────────────────╢
+ * ║  QUICK START (browser console):                                 ║
+ * ║    auth('YOUR_CODE')                                            ║
+ * ║    force(entityId, x, y)    ← apply force to your entity        ║
+ * ╟───────────────────────────────────────────────────────────╢
+ * ║  WEBSOCKET API:                                                  ║
+ * ║    var ws = new WebSocket('ws://' + location.host)              ║
+ * ║    ws.send(JSON.stringify({ type:'auth', code:'...' }))          ║
+ * ║    ws.send(JSON.stringify({ type:'cmd',                          ║
+ * ║      entityId:'red-aim-yair-1', force:{ x:300, y:-200 } }))     ║
+ * ║    ws.onmessage = e => console.log(JSON.parse(e.data))          ║
+ * ╟───────────────────────────────────────────────────────────╢
+ * ║  HTTP API (for bots / scripts):                                 ║
+ * ║    GET  /api/state                        → full game state      ║
+ * ║    POST /api/force                        → apply force          ║
+ * ║      body: { code, entityId, force:{ x, y } }                   ║
+ * ╟───────────────────────────────────────────────────────────╢
+ * ║  SERVER LOGIC (study to build a better bot!):                   ║
+ * ║    GET  /server.js                        → full server source   ║
+ * ╟───────────────────────────────────────────────────────────╢
+ * ║  STATE FORMAT (received every tick):                            ║
+ * ║    { type:'state', running, paused, tickId, scores:{red,blue},  ║
+ * ║      entities: [{ id, name, type, team, x, y, vx, vy }] }       ║
+ * ║    entity.type: 'aim' | 'goal' (displayed as TARGET)           ║
+ * ║    entity.team: 'red' | 'blue'                                  ║
+ * ║    entity.id format: '{team}-{type}-{name}-{n}'                 ║
+ * ╟───────────────────────────────────────────────────────────╢
+ * ║  GOAL: AIM that stays within range of enemy TARGET for 1s → +1pt ║
+ * ║        First team to reach 40 points wins.                      ║
+ * ╚═══════════════════════════════════════════════════════════╝
+ */
+</script>
+
+<div id="app">
+  <header>
+    <div id="dot"></div>
+    <h1>AIM</h1>
+    <span id="stxt">CONNECTING…</span>
+    <span class="spacer"></span>
+    <button class="hbtn" onclick="document.getElementById('adm').classList.toggle('open')">⚙ ADMIN</button>
+  </header>
+
+  <div id="scorebar">
+    <span class="team-score team-red" id="sred">0</span>
+    <span id="divider">:</span>
+    <span class="team-score team-blue" id="sblue">0</span>
+  </div>
+  <div id="wrap">
+    <div id="game-area">
+    <div id="spl">
+      <h2>AIM</h2>
+      <p>PHYSICS COMBAT — AIM HUNTS TARGET, TARGET EVADES</p>
+      <div class="teams"><span class="tr">● RED</span><span style="color:#64748b">vs</span><span style="color:#2563eb">BLUE ●</span></div>
+      <button class="btn-ent" onclick="dismissSplash()">ENTER</button>
+    </div>
+    <canvas id="canvas"></canvas>
+    <div id="adm">
+      <h3>⚙ ADMIN</h3>
+      <input id="ap" type="password" placeholder="admin password" autocomplete="off"/>
+      <div class="abts">
+        <button class="abt abt-s" onclick="adminAct('start')">▶ START</button>
+        <button class="abt abt-p" onclick="adminAct('pause')">⏸ PAUSE</button>
+        <button class="abt abt-r" onclick="adminAct('reset')">↺ RESET</button>
+        <button id="mbtn" class="abt abt-m" onclick="adminAct('music')">♪ MUSIC</button>
+      </div>
+      <div id="afb"></div>
+      <div id="role-section">
+        <h4>🎮 ROLE ASSIGNMENTS</h4>
+        <table id="role-table">
+          <thead><tr><th>PLAYER</th><th>ROLE</th></tr></thead>
+          <tbody id="role-body"></tbody>
+        </table>
+        <button class="abt abt-assign" onclick="applyRoles()">&#10003; APPLY ROLES</button>
+      </div>
+    </div>
+    <div id="toast"></div>
+    </div><!-- /game-area -->
+    <div id="sc"><h3>ENTITIES</h3><div id="sl">—</div></div>
+  </div>
+
+  <footer>
+    <span id="fstat">STATUS: IDLE</span>
+    <span id="fwin">WIN AT: 40</span>
+    <span id="ftick">TICK: 0</span>
+  </footer>
+</div>
+<audio id="bgm" src="/music.mp3" loop preload="auto"></audio>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+let W = 0, H = 0, MAP_W = 2280, MAP_H = 1190;
+let gameState = null, wsConnected = false;
+
+function resize() {
+    const area = document.getElementById('game-area');
+    canvas.width  = W = area.clientWidth;
+    canvas.height = H = area.clientHeight;
+    if (gameState) render();
+}
+new ResizeObserver(resize).observe(document.getElementById('game-area'));
+resize();
+
+const sx = (x) => x * W / MAP_W;
+const sy = (y) => y * H / MAP_H;
+
+const WS = location.protocol === 'https:' ? 'wss:' : 'ws:';
+let ws;
+function connect() {
+    ws = new WebSocket(`${WS}//${location.host}`);
+    ws.onopen  = () => { wsConnected = true; setDot('on','CONNECTED'); };
+    ws.onmessage = (e) => { try { handle(JSON.parse(e.data)); } catch {} };
+    ws.onclose = () => { wsConnected = false; setDot('','RECONNECTING…'); setTimeout(connect,2000); };
+    ws.onerror = () => ws.close();
+}
+connect();
+
+function handle(msg) {
+    if (msg.type === 'state') {
+        if (msg.map) { MAP_W = msg.map.width; MAP_H = msg.map.height; }
+        gameState = msg; updateHUD(); render();
+    } else if (msg.type === 'auth_result') showToast(msg.ok?`Auth: ${msg.name}`:`Failed: ${msg.message}`);
+    else if (msg.type === 'admin_event') {
+        if (msg.action === 'music') { toggleMusic(); setFeedback('♪'); return; }
+        showToast(`Admin: ${msg.action.toUpperCase()}`); setFeedback(`✓ ${msg.action}`);
+        if (msg.action === 'start' && _pendingAdminStart) { _pendingAdminStart = false; startRec(); }
+        if (msg.action === 'reset') stopRec();
+    }
+    else if (msg.type === 'game_over') { showToast(`🏆 WINNER: ${msg.winner?.toUpperCase()}`); stopRec(); }
+    else if (msg.type === 'error') { showToast(msg.message); setFeedback(`✗ ${msg.message}`); }
+}
+
+function updateHUD() {
+    if (!gameState) return;
+    const { running, paused, tickId, scores, gameOver, winner } = gameState;
+    document.getElementById('ftick').textContent = `TICK: ${tickId}`;
+    document.getElementById('sred').textContent  = scores?.red  || 0;
+    document.getElementById('sblue').textContent = scores?.blue || 0;
+    let label = 'IDLE';
+    if (gameOver)         { label = `WINNER: ${winner?.toUpperCase()}`; setDot('on','GAME OVER'); }
+    else if (running && !paused) { label = 'RUNNING'; setDot('run','RUNNING'); }
+    else if (paused)      { label = 'PAUSED';  setDot('on','PAUSED'); }
+    else                  { setDot('on','CONNECTED'); }
+    document.getElementById('fstat').textContent = `STATUS: ${label}`;
+
+    const ents = gameState.entities || [];
+    const html  = ents.map(e =>
+        `<div class="sr"><span class="sn" style="color:${e.team==='red'?'#dc2626':'#2563eb'}">${e.name}</span><span class="sv">${e.type==='goal'?'TARGET':e.type.toUpperCase()}</span></div>`
+    ).join('');
+    document.getElementById('sl').innerHTML = html || '—';
+    buildRoleTable(gameState.roster);
+}
+
+function render() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#060608';
+    ctx.fillRect(0, 0, W, H);
+
+    // Centre dividing line
+    ctx.strokeStyle = '#1a1a2e';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6,4]);
+    ctx.beginPath(); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Team half tints
+    ctx.fillStyle = 'rgba(220,38,38,0.04)';
+    ctx.fillRect(0, 0, W/2, H);
+    ctx.fillStyle = 'rgba(37,99,235,0.04)';
+    ctx.fillRect(W/2, 0, W/2, H);
+
+    if (!gameState || !gameState.entities) return;
+
+    const cfg = gameState.config || { goalRadius:22, aimRadius:16, hitDistance:22 };
+
+    for (const e of gameState.entities) {
+        const ex = sx(e.pos.x), ey = sy(e.pos.y);
+        const r  = e.type === 'goal' ? Math.max(8, sx(cfg.goalRadius)) : Math.max(6, sx(cfg.aimRadius));
+        const col = e.team === 'red' ? '#dc2626' : '#2563eb';
+
+        ctx.shadowColor = col; ctx.shadowBlur = 12;
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        if (e.type === 'goal') {
+            ctx.arc(ex, ey, r, 0, Math.PI*2);
+        } else {
+            // Diamond for aim
+            ctx.moveTo(ex, ey - r);
+            ctx.lineTo(ex + r, ey);
+            ctx.lineTo(ex, ey + r);
+            ctx.lineTo(ex - r, ey);
+            ctx.closePath();
+        }
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Velocity arrow
+        const spd = Math.hypot(e.vel.x, e.vel.y);
+        if (spd > 5) {
+            const scale = Math.min(40, spd * 0.08);
+            const vx = e.vel.x / spd * scale, vy = e.vel.y / spd * scale;
+            ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.55;
+            ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex + sx(vx)*10, ey + sy(vy)*10); ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+
+        // Label
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${Math.max(10,Math.floor(r*0.85))}px Courier New`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(e.name[0], ex, ey);
+        // Name below entity (all types)
+        ctx.fillStyle = col;
+        ctx.font = `bold ${Math.max(14, Math.floor(r * 1.1))}px Courier New`;
+        ctx.textBaseline = 'top';
+        ctx.fillText(e.name, ex, ey + r + 3);
+    }  // end for
+}  // end render
+
+function adminAct(action) {
+    if (!wsConnected) { showToast('Not connected'); return; }
+    if (action === 'start') _pendingAdminStart = true;
+    ws.send(JSON.stringify({type:'admin',password:document.getElementById('ap').value,action}));
+}
+function setFeedback(t) { const el=document.getElementById('afb'); el.textContent=t; setTimeout(()=>el.textContent='',3000); }
+function dismissSplash() {
+    document.getElementById('spl').style.display='none';
+}
+function toggleMusic() {
+    const bgm=document.getElementById('bgm');
+    bgm.paused?(bgm.currentTime=0,bgm.play().then(()=>updateMusicBtn(true)).catch(()=>{})):(bgm.pause(),updateMusicBtn(false));
+}
+function updateMusicBtn(on) { const b=document.getElementById('mbtn'); b.textContent=on?'♪ ON':'♪ OFF'; b.classList.toggle('play',on); }
+function setDot(cls,txt) { document.getElementById('dot').className=cls; document.getElementById('stxt').textContent=txt; }
+let _tt=null;
+function showToast(t) { const el=document.getElementById('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2800); }
+
+// ── Role assignment table ──────────────────────────────────────────────────────
+const ROLE_LABELS = {
+    'red-aim':  '🔴 CHASER',
+    'red-goal': '🔴 TARGET',
+    'blue-aim': '🔵 CHASER',
+    'blue-goal':'🔵 TARGET',
+    'out':      '— OUT',
+};
+function buildRoleTable(roster) {
+    const tbody = document.getElementById('role-body');
+    if (!tbody || !roster) return;
+    tbody.innerHTML = roster.map(({ name, role }) => `
+        <tr>
+          <td>${name}</td>
+          <td><select class="role-select" data-name="${name}">
+            ${Object.entries(ROLE_LABELS).map(([v,l]) =>
+                `<option value="${v}"${role===v?' selected':''}>${l}</option>`
+            ).join('')}
+          </select></td>
+        </tr>`).join('');
+}
+function applyRoles() {
+    if (!wsConnected) { showToast('Not connected'); return; }
+    const assignments = {};
+    document.querySelectorAll('.role-select').forEach(s => { assignments[s.dataset.name] = s.value; });
+    ws.send(JSON.stringify({ type:'admin', password:document.getElementById('ap').value, action:'assign', assignments }));
+}
+
+// ── Video Recording ───────────────────────────────────────────────────────────
+let _pendingAdminStart = false, _recorder = null, _recChunks = [];
+function startRec() {
+    if (_recorder && _recorder.state !== 'inactive') return;
+    _recChunks = [];
+    try {
+        const stream = canvas.captureStream(30);
+        const mime = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']
+            .find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
+        _recorder = new MediaRecorder(stream, {mimeType: mime});
+        _recorder.ondataavailable = e => { if (e.data.size > 0) _recChunks.push(e.data); };
+        _recorder.onstop = () => {
+            const blob = new Blob(_recChunks, {type: _recorder.mimeType});
+            const name = `AIM_${new Date().toISOString().replace(/[:.]/g,'-')}.webm`;
+            const a = Object.assign(document.createElement('a'), {href: URL.createObjectURL(blob), download: name});
+            a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+            showToast('📹 Recording saved');
+        };
+        _recorder.start(1000);
+        showToast('🔴 Recording started');
+    } catch(e) { showToast('⚠ Recording not supported'); }
+}
+function stopRec() {
+    if (_recorder && _recorder.state === 'recording') { _recorder.stop(); }
+}
+
+window.auth  = (code) => ws?.readyState===1 && ws.send(JSON.stringify({type:'auth',code}));
+window.force = (entityId,x,y) => ws?.readyState===1 && ws.send(JSON.stringify({type:'cmd',entityId,force:{x,y}}));
+</script>
+</body></html>
